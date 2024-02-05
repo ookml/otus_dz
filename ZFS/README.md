@@ -43,7 +43,7 @@ otus1  compressratio         1.80x                  -
 otus2  compressratio         2.21x                  -
 otus3  compressratio         3.63x                  -
 otus4  compressratio         1.00x                  -
-#Скаиваем архив и разархивируем его 
+# Скаиваем архив и разархивируем его 
 [root@zfs ~]# wget -O archive.tar.gz --no-check-certificate 'https://drive.usercontent.google.com/download?id=1MvrcEp-WgAQe57aDEzxSRalPAwbNN1Bb&export=download'
 --2024-02-05 08:34:04--  https://drive.usercontent.google.com/download?id=1MvrcEp-WgAQe57aDEzxSRalPAwbNN1Bb&export=download
 [root@zfs ~]# tar -xzvf archive.tar.gz 
