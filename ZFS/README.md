@@ -1,5 +1,6 @@
 # Команда выводит информацию о пулах
 [root@zfs ~]# zpool list
+
 NAME    SIZE  ALLOC   FREE  CKPOINT  EXPANDSZ   FRAG    CAP  DEDUP    HEALTH  ALTROOT
 otus1   480M  91.5K   480M        -         -     0%     0%  1.00x    ONLINE  -
 otus2   480M  91.5K   480M        -         -     0%     0%  1.00x    ONLINE  -
