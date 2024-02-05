@@ -1,5 +1,5 @@
-## Домашние задание "ZFS"
-1. # Установка необходимого ПО
+# Домашние задание "ZFS"
+1. ## Установка необходимого ПО
           yum install -y http://download.zfsonlinux.org/epel/zfs-release.el7_8.noarch.rpm
           rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-zfsonlinux
           yum install -y epel-release kernel-devel zfs
