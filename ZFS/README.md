@@ -8,12 +8,14 @@ otus3   480M  91.5K   480M        -         -     0%     0%  1.00x    ONLINE  -
 otus4   480M  91.5K   480M        -         -     0%     0%  1.00x    ONLINE  -
 # Команда показывает методы сжатия
 [root@zfs ~]# zfs get all | grep compression
+
 otus1  compression           lzjb                   local
 otus2  compression           lz4                    local
 otus3  compression           gzip-9                 local
 otus4  compression           zle                    local
 # Проверяем скачались ли все файлы в указанные пулы из скрипта
 [root@zfs ~]# ls -l /otus*
+
 /otus1:
 total 22067
 -rw-r--r--. 1 root root 41016061 Feb  2 08:53 pg2600.converter.log
@@ -31,6 +33,7 @@ total 40091
 -rw-r--r--. 1 root root 41016061 Feb  2 08:53 pg2600.converter.log
 # Проверяем и видем что лучший метод зжатия gzip-9
 [root@zfs ~]# zfs list
+
 NAME    USED  AVAIL     REFER  MOUNTPOINT
 otus1  21.7M   330M     21.6M  /otus1
 otus2  17.7M   334M     17.6M  /otus2
@@ -38,6 +41,7 @@ otus3  10.8M   341M     10.7M  /otus3
 otus4  39.3M   313M     39.2M  /otus4
 # Убедились что самый лучший способ сжатия gzip-9
 [root@zfs ~]# zfs get all | grep compressratio | grep -v ref
+
 otus1  compressratio         1.80x                  -
 otus2  compressratio         2.21x                  -
 otus3  compressratio         3.63x                  -
@@ -45,12 +49,14 @@ otus4  compressratio         1.00x                  -
 # Скаиваем архив и разархивируем его 
 [root@zfs ~]# wget -O archive.tar.gz --no-check-certificate 'https://drive.usercontent.google.com/download?id=1MvrcEp-WgAQe57aDEzxSRalPAwbNN1Bb&export=download'
 --2024-02-05 08:34:04--  https://drive.usercontent.google.com/download?id=1MvrcEp-WgAQe57aDEzxSRalPAwbNN1Bb&export=download
+
 [root@zfs ~]# tar -xzvf archive.tar.gz 
 zpoolexport/
 zpoolexport/filea
 zpoolexport/fileb
 # Проверяем возможность импорта в данный коталог пула (Показывает нам имя пулла тип RAID и каталог)
 [root@zfs ~]# zpool import -d zpoolexport/
+
    pool: otus
      id: 6554193320433390805
   state: ONLINE
