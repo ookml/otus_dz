@@ -1,5 +1,3 @@
-[root@zfs ~]# chmod ugo+x config.sh 
-[root@zfs ~]# ./config.sh 
 # Команда выводит информацию о пулах
 [root@zfs ~]# zpool list
 NAME    SIZE  ALLOC   FREE  CKPOINT  EXPANDSZ   FRAG    CAP  DEDUP    HEALTH  ALTROOT
