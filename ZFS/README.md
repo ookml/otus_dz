@@ -85,11 +85,11 @@ NAME  PROPERTY  VALUE      SOURCE
 otus  checksum  sha256     local
 
 # Восстановление из скаченного снапшета 
-[root@zfs ~]# zfs receive otus/test@today < otus_task2.file
-[root@zfs ~]# find /otus/test/ -name "secret_message"
-/otus/test/task1/file_mess/secret_message
-
-[root@zfs ~]# 
+[root@zfs ~]# zfs receive otus/test2 < otus_task2.file
+[root@zfs ~]# find /otus/test2 -name "secret_message"
+/otus/test2/task1/file_mess/secret_message
+[root@zfs ~]# cat /otus/test2/task1/file_mess/secret_message
+https://otus.ru/lessons/linux-hl/
 
 
 
