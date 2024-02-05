@@ -9,19 +9,19 @@
           modprobe zfs
           yum install -y wget
 
-2. # Создадим mirror pool RAID 1 из дисков
+2. ## Создадим mirror pool RAID 1 из дисков
           zpool create otus1 mirror /dev/sdb /dev/sdc
           zpool create otus2 mirror /dev/sdd /dev/sde
           zpool create otus3 mirror /dev/sdf /dev/sdg
           zpool create otus4 mirror /dev/sdh /dev/sdi
 
-3. # Создадим файловые системы с разным сжатием
+3. ## Создадим файловые системы с разным сжатием
           zfs set compression=lzjb otus1
           zfs set compression=lz4 otus2
           zfs set compression=gzip-9 otus3
           zfs set compression=zle otus4
 
-
+##---------------------------------------------------------------------------------------
 # Выводы команд 
 
 # Команда выводит информацию о пулах
