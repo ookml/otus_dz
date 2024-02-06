@@ -1,8 +1,9 @@
-                                                                              # Стенд Vagrant с NFS
-      # Настройка сервера                                                                        
+                                                                              #Стенд Vagrant с NFS
+      #Настройка сервера                                                                        
 1. ## Доустановка компонентов
-bash
+---bash
    yum install nfs-utils
+   ---
 3. ## Включаем Firewall
      systemctl enable firewalld --now 
 4. ## Разрешаем доступ к NFS
