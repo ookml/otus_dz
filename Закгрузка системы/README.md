@@ -90,7 +90,17 @@ mount -o remount,rw /
     lrwxrwxrwx. 1 root root 7 Feb 13 09:48 LogVol01 -> ../dm-1
 
 
-    
+ # Добавить модуль в initrd
 
+ Скрипты модулей хранятся в каталоге /usr/lib/dracut/modules.d/. Для того чтобы
+ добавить свой модуль создаем там папку с именем 01test:
+
+    [root@lesson10 ~]# mkdir /usr/lib/dracut/modules.d/01test
+
+В ней создадим два файла и поместем содержимое со скриптов в репозитории:
+
+    [root@lesson10 ~]# nano /usr/lib/dracut/modules.d/module-setup.sh
+    [root@lesson10 ~]# nano /usr/lib/dracut/modules.d/test.sh
+    
 
 
