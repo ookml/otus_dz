@@ -42,16 +42,29 @@ mount -o remount,rw /
 
 ● Первым делом посмотрим текущее состояние системы:
 
+   
     [root@lesson10 ~]# vgs
     VG         #PV #LV #SN Attr   VSize   VFree
     VolGroup00   1   2   0 wz--n- <38.97g    0 
     
-   Приступим к переименованию:
+ Приступим к переименованию:
    
+    [root@lesson10 ~]# lsblk
+    NAME                    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+    sda                       8:0    0   40G  0 disk 
+    |-sda1                    8:1    0    1M  0 part 
+    |-sda2                    8:2    0    1G  0 part /boot
+    `-sda3                    8:3    0   39G  0 part 
+      |-VolGroup00-LogVol00 253:0    0 37.5G  0 lvm  /
+      `-VolGroup00-LogVol01 253:1    0  1.5G  0 lvm  [SWAP]
+    sdb                       8:16   0    1G  0 disk 
+
     [root@lesson10 ~]# vgrename VolGroup00 OtusRoot
     Volume group "VolGroup00" successfully renamed to "OtusRoot"
 
-Пересоздаем initrd image, чтобý он знал новое название Volume Group
+ После переименовывания правим след. конф. файлы /etc/fstab, /etc/default/grub, /boot/grub2/grub.cfg;
+
+ Пересоздаем initrd image, чтобы он знал новое название Volume Group
     
     [root@lesson10 ~]# mkinitrd -f -v /boot/initramfs-$(uname -r).img $(uname -r)
 
