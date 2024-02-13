@@ -99,8 +99,26 @@ mount -o remount,rw /
 
 В ней создадим два файла и поместем содержимое со скриптов в репозитории:
 
-    [root@lesson10 ~]# nano /usr/lib/dracut/modules.d/module-setup.sh
-    [root@lesson10 ~]# nano /usr/lib/dracut/modules.d/test.sh
-    
+    [root@lesson10 ~]# nano /usr/lib/dracut/modules.d/01test/module-setup.sh
+    [root@lesson10 ~]# nano /usr/lib/dracut/modules.d/01test/test.sh
+    [root@lesson10 ~]# ls -l /usr/lib/dracut/modules.d/01test/
+    total 8/01test/
+    -rw-r--r--. 1 root root 126 Feb 13 10:38 module-setup.sh
+    -rw-r--r--. 1 root root 332 Feb 13 10:39 test.sh
+
+ Пересобираем образ initrd
+ 
+    [root@lesson10 ~]# mkinitrd -f -v /boot/initramfs-$(uname -r).img $(uname -r)
+    [root@lesson10 ~]# dracut -f -v
+
+ Проверяем что все работает
+
+    root@lesson10 ~]# lsinitrd -m /boot/initramfs-$(uname -r).img | grep test
+    test
+
+ удаляем rghb и quiet в /boot/grub2/grub.cfg
+
+ В итоге при загрузке будет пауза на 10 секунд и вý увидите пингвина в вýводе
+терминала
 
 
