@@ -1,7 +1,10 @@
 # Цель домашнего задания
 # Диагностировать проблемы и модифицировать политики SELinux для корректной работы приложений, если это требуется.
 
-## 1. Устанавливаем ВМ через Vagrantfile
+
+# 1. Запуск nginx на нестандартном порту 3-мя разными способами 
+
+## Устанавливаем ВМ через Vagrantfile в репозитории
 
 После установки проверяем статус nginx и видем что SELinux блокирует работу nginx на не стандартном порту
 
@@ -179,3 +182,181 @@ zosremote       1.2.0
 [root@selinux ~]# semodule -r nginx 
 libsemanage.semanage_direct_remove_key: Removing last nginx module (no other nginx module exists at another priority).
 ```
+# 2. Обеспечение работоспособности приложения при включенном SELinux
+
+Для того, чтобы развернуть стенд потребуется хост, с установленным git и ansible.
+```
+root@LinuxMint:~# ansible --version
+ansible 2.10.8
+  config file = None
+  configured module search path = ['/root/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python3/dist-packages/ansible
+  executable location = /usr/bin/ansible
+  python version = 3.10.12 (main, Nov 20 2023, 15:14:05) [GCC 11.4.0]
+root@LinuxMint:~# git --version
+git version 2.34.1
+```
+далее 
+
+Выполним клонирование репозитория https://github.com/mbfx/otus-linux-adm.git
+```
+root@LinuxMint:~# git clone https://github.com/mbfx/otus-linux-adm.git
+Клонирование в «otus-linux-adm»...
+remote: Enumerating objects: 558, done.
+remote: Counting objects: 100% (456/456), done.
+remote: Compressing objects: 100% (303/303), done.
+remote: Total 558 (delta 125), reused 396 (delta 74), pack-reused 102
+Получение объектов: 100% (558/558), 1.38 МиБ | 1.09 МиБ/с, готово.
+Определение изменений: 100% (140/140), готово.
+```
+Переходим в каталог и разварачиваем 2 виртуалки, проверяем статус
+```
+root@LinuxMint:~# cd otus-linux-adm/selinux_dns_problems/
+root@LinuxMint:~/otus-linux-adm/selinux_dns_problems# vagrant up
+root@LinuxMint:~/otus-linux-adm/selinux_dns_problems# vagrant status
+Current machine states:
+
+ns01                      running (virtualbox)
+client                    running (virtualbox)
+
+This environment represents multiple VMs. The VMs are all listed
+above with their current state. For more information about a specific
+VM, run `vagrant status NAME`.
+```
+подключаемся на клиент 
+```
+root@LinuxMint:~/otus-linux-adm/selinux_dns_problems# vagrant ssh client
+```
+Попробуем внести изменения в зону: nsupdate -k /etc/named.zonetransfer.key
+```
+[vagrant@client ~]$ sudo -i
+[root@client ~]# nsupdate -k /etc/named.zonetransfer.key 
+> server 192.168.50.10
+> zone ddns.lab
+> update add www.ddns.lab. 60 A 192.168.50.15
+> send
+update failed: SERVFAIL
+> quit
+```
+Выдает ошибку, смотрим лог SELinux
+```
+[root@client ~]# cat /var/log/audit/audit.log | audit2why
+[root@client ~]# 
+```
+Видим что и тут ошибок нету 
+
+Не закрываем сессию клиента и подключемся к серверу
+
+Проверяем логи SELinux
+```
+[root@ns01 ~]# cat /var/log/audit/audit.log | audit2why
+type=AVC msg=audit(1709713700.785:1911): avc:  denied  { create } for  pid=5129 comm="isc-worker0000" name="named.ddns.lab.view1.jnl" scontext=system_u:system_r:named_t:s0 tcontext=system_u:object_r:etc_t:s0 tclass=file permissive=0
+
+        Was caused by:
+                Missing type enforcement (TE) allow rule.
+
+                You can use audit2allow to generate a loadable module to allow this access.
+```
+В логах мы видим, что ошибка в контексте безопасности. Вместо типа named_t используется тип etc_t.
+
+Проверим данную проблему в каталоге /etc/named:
+```
+[root@ns01 ~]# ls -laZ /etc/named
+drw-rwx---. root named system_u:object_r:etc_t:s0       .
+drwxr-xr-x. root root  system_u:object_r:etc_t:s0       ..
+drw-rwx---. root named unconfined_u:object_r:etc_t:s0   dynamic
+-rw-rw----. root named system_u:object_r:etc_t:s0       named.50.168.192.rev
+-rw-rw----. root named system_u:object_r:etc_t:s0       named.dns.lab
+-rw-rw----. root named system_u:object_r:etc_t:s0       named.dns.lab.view1
+-rw-rw----. root named system_u:object_r:etc_t:s0       named.newdns.lab
+```
+Тут мы также видим, что контекст безопасности неправильный. Проблема заключается в том, что конфигурационные файлы лежат в другом каталоге. Посмотреть в каком каталоги должны лежать, файлы, чтобы на них распространялись правильные политики SELinux можно с помощью команды: sudo semanage fcontext -l 
+
+```
+[root@ns01 ~]# sudo semanage fcontext -l | grep named
+/etc/rndc.*                                        regular file       system_u:object_r:named_conf_t:s0 
+/var/named(/.*)?                                   all files          system_u:object_r:named_zone_t:s0 
+...
+```
+Изменим тип контекста безопасности для каталога /etc/named:
+```
+[root@ns01 ~]# chcon -R -t named_zone_t /etc/named
+[root@ns01 ~]# ls -laZ /etc/named
+drw-rwx---. root named system_u:object_r:named_zone_t:s0 .
+drwxr-xr-x. root root  system_u:object_r:etc_t:s0       ..
+drw-rwx---. root named unconfined_u:object_r:named_zone_t:s0 dynamic
+-rw-rw----. root named system_u:object_r:named_zone_t:s0 named.50.168.192.rev
+-rw-rw----. root named system_u:object_r:named_zone_t:s0 named.dns.lab
+-rw-rw----. root named system_u:object_r:named_zone_t:s0 named.dns.lab.view1
+-rw-rw----. root named system_u:object_r:named_zone_t:s0 named.newdns.lab
+```
+Попробуем снова внести изменения с клиента: 
+```
+[root@ns01 ~]# nsupdate -k /etc/named.zonetransfer.key
+> server 192.168.50.10
+> zone ddns.lab
+> update add www.ddns.lab. 60 A 192.168.50.15
+> send
+> quit
+```
+```[root@client ~]# dig www.ddns.lab
+
+; <<>> DiG 9.11.4-P2-RedHat-9.11.4-26.P2.el7_9.15 <<>> www.ddns.lab
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 30144
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;www.ddns.lab.                  IN      A
+
+;; AUTHORITY SECTION:
+ddns.lab.               600     IN      SOA     ns01.dns.lab. root.dns.lab. 2711201407 3600 600 86400 600
+
+;; Query time: 0 msec
+;; SERVER: 192.168.50.10#53(192.168.50.10)
+;; WHEN: Wed Mar 06 08:43:01 UTC 2024
+;; MSG SIZE  rcvd: 91
+```
+Видим, что изменения применились. Попробуем перезагрузить хосты и ещё раз сделать запрос с помощью dig: 
+```
+[root@client ~]#  dig @192.168.50.10 www.ddns.lab
+
+; <<>> DiG 9.11.4-P2-RedHat-9.11.4-26.P2.el7_9.15 <<>> @192.168.50.10 www.ddns.lab
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 3500
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;www.ddns.lab.                  IN      A
+
+;; AUTHORITY SECTION:
+ddns.lab.               600     IN      SOA     ns01.dns.lab. root.dns.lab. 2711201407 3600 600 86400 600
+
+;; Query time: 1 msec
+;; SERVER: 192.168.50.10#53(192.168.50.10)
+;; WHEN: Wed Mar 06 08:44:14 UTC 2024
+;; MSG SIZE  rcvd: 91
+```
+
+Для того, чтобы вернуть правила обратно, можно ввести команду: restorecon -v -R /etc/named
+```
+[vagrant@ns01 ~]$ sudo -i
+[root@ns01 ~]# restorecon -v -R /etc/named
+restorecon reset /etc/named context system_u:object_r:named_zone_t:s0->system_u:object_r:etc_t:s0
+restorecon reset /etc/named/named.dns.lab.view1 context system_u:object_r:named_zone_t:s0->system_u:object_r:etc_t:s0
+restorecon reset /etc/named/named.dns.lab context system_u:object_r:named_zone_t:s0->system_u:object_r:etc_t:s0
+restorecon reset /etc/named/dynamic context unconfined_u:object_r:named_zone_t:s0->unconfined_u:object_r:etc_t:s0
+restorecon reset /etc/named/dynamic/named.ddns.lab context system_u:object_r:named_zone_t:s0->system_u:object_r:etc_t:s0
+restorecon reset /etc/named/dynamic/named.ddns.lab.view1 context system_u:object_r:named_zone_t:s0->system_u:object_r:etc_t:s0
+restorecon reset /etc/named/dynamic/named.ddns.lab.jnl context system_u:object_r:named_zone_t:s0->system_u:object_r:etc_t:s0
+restorecon reset /etc/named/named.newdns.lab context system_u:object_r:named_zone_t:s0->system_u:object_r:etc_t:s0
+restorecon reset /etc/named/named.50.168.192.rev context system_u:object_r:named_zone_t:s0->system_u:object_r:etc_t:s0
+```
+
