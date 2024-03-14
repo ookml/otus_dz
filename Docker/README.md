@@ -39,7 +39,7 @@ docker-compose version 1.24.1, build 4667896b
 ```
 oem@LinuxMint:/var/docker$ ls
 Dockerfile  index.html
-oem@LinuxMint:/var/docker$ sudo docker build -t otusbox/myimages:nginx .
+oem@LinuxMint:/var/docker$ sudo docker build -t ookml/myimages:nginx .
 [+] Building 54.5s (10/10) FINISHED                                                                                                                                                                                          docker:default
  => [internal] load build definition from Dockerfile                                                                                                                                                                                   0.0s
  => => transferring dockerfile: 950B                                                                                                                                                                                                   0.0s
@@ -65,16 +65,29 @@ oem@LinuxMint:/var/docker$ sudo docker build -t otusbox/myimages:nginx .
  => => naming to docker.io/otusbox/myimages:nginx        
 ```
 ```
-oem@LinuxMint:/var/docker$ docker run -d -p 1234:80 otusbox/myimages:nginx
+oem@LinuxMint:/var/docker$ docker run -d -p 1234:80 ookml/myimages:nginx
 420cb46ce5e05fba66e8a34b22214c96e3a1d98d115d2c5da176184574e408fd
 ``` 
 ```
 oem@LinuxMint:/var/docker$ docker images
 REPOSITORY         TAG       IMAGE ID       CREATED         SIZE
-otusbox/myimages   nginx     0a188e6a6e45   8 minutes ago   242MB
+ookml/myimages   nginx     0a188e6a6e45   8 minutes ago   242MB
 oem@LinuxMint:/var/docker$ docker ps
 CONTAINER ID   IMAGE                    COMMAND                  CREATED          STATUS          PORTS                                            NAMES
-420cb46ce5e0   otusbox/myimages:nginx   "nginx -g 'daemon of…"   27 seconds ago   Up 26 seconds   443/tcp, 0.0.0.0:1234->80/tcp, :::1234->80/tcp   elated_ramanujan
+420cb46ce5e0   ookml/myimages:nginx   "nginx -g 'daemon of…"   27 seconds ago   Up 26 seconds   443/tcp, 0.0.0.0:1234->80/tcp, :::1234->80/tcp   elated_ramanujan
+```
+Входим в аккаунт Docker hub и пушим на Docker hub
+
+```
+oem@LinuxMint:/var/docker$ docker push ookml/myimages:nginx
+The push refers to repository [docker.io/ookml/myimages]
+9328c44bfb2d: Pushed 
+b4a2b16f6e36: Pushed 
+f0f5e9bddb47: Pushed 
+3351eb708c58: Pushed 
+d4fc045c9e3a: Pushed 
+nginx: digest: sha256:17c39148720d4224d6cc550f245d6c07c491be010589ff07156c9c9ab5d812eb size: 1365
+oem@LinuxMint:/var/docker$ 
 ```
 
 4. Определите разницу между контейнером и образом
