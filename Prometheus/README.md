@@ -18,3 +18,5 @@ ADMIN_USER='admin' ADMIN_PASSWORD='admin' ADMIN_PASSWORD_HASH='$2a$14$1l.IozJx7x
 Заходим в Grafana: *http://192.168.100.2/:3000* (логин и пароль admin/admin).
 
 ![Dashboard1](./dashboard1.png)
+
+![Dashboard2](./dashboard2.png)
