@@ -47,3 +47,29 @@ if [ $(date +%a) = "Sat" ] || [ $(date +%a) = "Sun" ]; then
     exit 0
 fi
 ```
+## Добавим права на исполнение файла: chmod +x /usr/local/bin/login.sh
+
+## Укажем в файле /etc/pam.d/sshd модуль pam_exec и наш скрипт:
+```
+vim /etc/pam.d/sshd 
+
+
+#%PAM-1.0
+auth       substack     password-auth
+auth       include      postlogin
+auth required pam_exec.so debug /usr/local/bin/login.sh
+account    required     dad
+account    required     pam_nologin.so
+account    include      password-auth
+password   include      password-auth
+# pam_selinux.so close should be the first session rule
+session    required     pam_selinux.so close
+session    required     pam_loginuid.so
+# pam_selinux.so open should only be followed by sessions to be executed in the user context
+session    required     pam_selinux.so open env_params
+session    required     pam_namespace.so
+session    optional     pam_keyinit.so force revoke
+session    optional     pam_motd.so
+session    include      password-auth
+session    include      postlogin
+```
