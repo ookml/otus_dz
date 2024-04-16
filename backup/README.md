@@ -12,4 +12,44 @@
 * написан скрипт для снятия резервных копий. Скрипт запускается из соответствующей Cron джобы, либо systemd timer-а - на ваше усмотрение;
 * настроено логирование процесса бекапа. Для упрощения можно весь вывод перенаправлять в logger с соответствующим тегом. Если настроите не в syslog, то обязательна ротация логов.
 
+```
+vagrant up
+vagrant ssh client
+sudo -i
 
+export BACKUPSERVER=192.168.59.10
+
+# --- инициализации репозитория для хранения резервных копии
+borg init --encryption=repokey borg@$BACKUPSERVER:/var/backup/
+
+# --- создание резервной копии
+borg create --stats --list borg@$BACKUPSERVER:/var/backup/::"etc-{now:%Y-%m-%d_%H:%M:%S}" /etc
+
+# --- отобразить список резервных копий
+borg list borg@$BACKUPSERVER:/var/backup/
+
+# --- отобразить список файлов резервной копии
+export ARCNAME=etc-2023-08-14_04:48:57
+borg list borg@$BACKUPSERVER:/var/backup/::$ARCNAME
+
+# --- извлечь файл из копии в текущую директорию
+borg extract borg@$BACKUPSERVER:/var/backup/::$ARCNAME etc/hostname
+cat ./etc/hostname 
+client
+```
+Автоматическое резервирвание запущено через ansible (см. playbooks/client.yaml). Команда удаления архивов: ExecStart=/bin/borg prune --keep-hourly 5 ${REPO}: не удалять крайний часовой архив в течении 5 часов.
+
+Для проверки необходимо оставить работающими виртуальные машины в на "стыке" часа и выполнить команды:
+```
+vagrant ssh client
+sudo -i
+export BACKUPSERVER=192.168.59.10
+[root@client ~]# export BACKUPSERVER=192.168.59.10
+[root@client ~]# 
+[root@client ~]# borg list borg@$BACKUPSERVER:/var/backup/
+Enter passphrase for key ssh://borg@192.168.59.10/var/backup: 
+etc-2024-04-16_07:56:44              Tue, 2024-04-16 07:56:45 [815881b5793e9a4e1ae2d00eec67c340bb2e744238a82abde0bba406ec789047]
+etc-2024-04-16_08:29:01              Tue, 2024-04-16 08:29:01 [ebd06b6dfdefae97f60109bf04d11e6dabbf4a037a7f7a36837596005c699459]
+[root@client ~]# 
+
+```
