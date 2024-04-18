@@ -23,5 +23,4 @@ Network | Netmask | N | Hostmin | Hostmax | Broadcast
 
 ## Практическая часть
 
-https://github.com/nmix/2023-04-linux/tree/main/27
 
