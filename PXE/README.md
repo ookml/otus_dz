@@ -405,4 +405,174 @@ systemctl restart tftp.service
 systemctl enable tftp.service
 ```
 ## Настройка TFTP-сервера в Ansible:
+Настройка TFTP-сервера в Ansible:
+```
+vi ./roles/dhcp_pxe/main/tftp.yml
+```
+```
+---
+# tasks file for dhcp_pxe
 
+#Создаём каталог /var/lib/tftpboot/pxelinux.cfg
+- name: Create TFTP directory
+  file:
+    path: /var/lib/tftpboot/pxelinux.cfg
+    state: directory
+    mode: '0755'
+
+#Копируем файл-меню на сервер
+- name: set up pxelinux
+  template:
+    src: default
+    dest: /var/lib/tftpboot/pxelinux.cfg/default
+    owner: root
+    group: root
+    mode: 0644
+
+#Извлекаем файлы из RPM-пакета
+- name: extract packages syslinux
+  shell: rpm2cpio /iso/BaseOS/Packages/syslinux-tftpboot-6.04-5.el8.noarch.rpm | cpio -dimv
+
+#Копируем файлы в каталог /var/lib/tftpboot/
+- name: copy files to TFTP share
+  copy:
+    src: /home/vagrant/tftpboot/{{ item }}
+    dest: /var/lib/tftpboot/{{ item }}
+    mode: '0644'
+    remote_src: true
+  loop:
+  - pxelinux.0
+  - ldlinux.c32
+  - libmenu.c32
+  - libutil.c32
+  - menu.c32
+  - vesamenu.c32
+
+#Копируем файлы в каталог /var/lib/tftpboot/
+- name: copy initrd and vmlinuz files to TFTP share
+  copy:
+    src: /iso/images/pxeboot/{{ item }}
+    dest: /var/lib/tftpboot/{{ item }}
+    mode: '0755'
+    remote_src: true
+  loop:
+  - initrd.img
+  - vmlinuz
+  notify: 
+  - restart tftp-server
+```
+В файл ./roles/dhcp_pxe/handlers/main.yml добавим следующие строки:
+```
+#Перезапускаем TFTP-сервер и добавляем его в автозагрузку
+- name: restart tftp-server
+  service:
+    name: tftp.service
+    state: restarted
+    enabled: true
+```
+Настройка DHCP-сервера
+
+1. Устанавливаем DHCP-сервер:
+```
+yum install dhcp-server
+```
+```
+[root@pxeserver ~]# cat  /etc/dhcp/dhcpd.conf
+#
+# DHCP Server Configuration file.
+#   see /usr/share/doc/dhcp-server/dhcpd.conf.example
+#   see dhcpd.conf(5) man page
+#
+option space pxelinux;
+option pxelinux.magic code 208 = string;
+option pxelinux.configfile code 209 = text;
+option pxelinux.pathprefix code 210 = text;
+option pxelinux.reboottime code 211 = unsigned integer 32;
+option architecture-type code 93 = unsigned integer 16;
+
+#Указываем сеть и маску подсети, в которой будет работать DHCP-сервер
+subnet 10.0.0.0 netmask 255.255.255.0 {
+        #Указываем шлюз по умолчанию, если потребуется
+        #option routers 10.0.0.1;
+        #Указываем диапазон адресов
+        range 10.0.0.100 10.0.0.120;
+		
+        class "pxeclients" {
+          match if substring (option vendor-class-identifier, 0, 9) = "PXEClient";
+          #Указываем адрес TFTP-сервера
+          next-server 10.0.0.20;
+          #Указываем имя файла, который надо запустить с TFTP-сервера
+          filename "pxelinux.0";
+        }
+
+```
+## Настройка DHCP-сервера в Ansible:
+```
+o0kml@o0kml-pc:~/dhcp_pxe$ cat   ansible/roles/dhcp_pxe/main/dhcp.yml
+---
+# tasks file for dhcp_pxe
+
+#Копирование файла конфигурации DHCP-сервера
+- name: set up dhcp-server
+  template:
+    src: dhcpd.conf.j2
+    dest: /etc/dhcp/dhcpd.conf
+    mode: '0644'
+  notify:
+  - restart dhcp-server
+
+```
+В файл ./roles/dhcp_pxe/handlers/main.yml добавим следующие строки:
+
+```
+#Перезапуск службы и добавление в автозагрузку
+- name: restart dhcp-server
+  service:
+    name: dhcpd
+    state: restarted
+    enabled: true
+```
+
+Файл ./roles/dhcp_pxe/handlers/main.yml в целом выглядит следующим образом:
+```
+o0kml@o0kml-pc:~/dhcp_pxe$ cat   ansible/roles/dhcp_pxe/handlers/main.yml 
+---
+# handlers file for dhcp_pxe
+
+#Перезупускаем httpd и добавляем службу в автозагрузку
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted
+    enabled: true
+
+#Перезапускаем TFTP-сервер и добавляем его в автозагрузку
+- name: restart tftp-server
+  service:
+    name: tftp.service
+    state: restarted
+    enabled: true
+
+#Перезапуск службы и добавление в автозагрузку
+- name: restart dhcp-server
+  service:
+    name: dhcpd
+    state: restarted
+    enabled: true
+
+```
+
+На данном этапе мы закончили настройку PXE-сервера для ручной установки сервера. Давайте попробуем запустить процесс установки вручную, для удобства воспользуемся установкой через графический интерфейс:
+В настройках виртуальной машины pxeclient рекомендуется поменять графический контроллер на VMSVGA и добавить видеопамяти. Видеопамять должна стать 20 МБ или больше.
+
+<img src="./screens/2024-04-24_13-50.png" alt="2024-04-24_13-50.png" />
+С такими настройками картинка будет более плавная и не будет постоянно мигать.
+Нажимаем ОК, выходим из настроек ВМ и запускаем её.
+
+<img src="./screens/2024-04-24_13-48.png" alt="2024-04-24_13-48.png" />
+Выбираем графическую установку.
+После этого, будут скачаны необходимые файлы с веб-сервера.
+Как только появится окно установки, нам нужно будет поочереди пройти по всем компонентам и указать с какими параметрами мы хотим установить ОС:
+<img src="./screens/2024-04-24_13-48_2.png" alt="2024-04-24_13-48_2.png" />
+После установки всех, нужных нам параметров нажимаем Begin installation.
+<img src="./screens/2024-04-24_13-53.png" alt="2024-04-24_13-53.png" />
