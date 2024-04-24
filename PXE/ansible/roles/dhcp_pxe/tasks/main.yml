@@ -1,0 +1,10 @@
+---
+# tasks file for dhcp_pxe
+
+- include_tasks: web.yml
+
+- include_tasks: tftp.yml
+
+- include_tasks: dhcp.yml
+
+- include_tasks: ks.yml

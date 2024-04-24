@@ -1,0 +1,9 @@
+---
+- name: CentOS_PXE | Set up PXE Server
+  #Указываем имя хоста или группу, которые будем настраивать
+  hosts: pxeserver
+  #Параметр выполнения модулей от root-пользователя
+  become: true
+
+  roles:
+    - { role: dhcp_pxe, when: ansible_system == 'Linux' }

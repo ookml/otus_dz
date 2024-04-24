@@ -1,0 +1,23 @@
+---
+# handlers file for dhcp_pxe
+
+#Перезупускаем httpd и добавляем службу в автозагрузку
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted
+    enabled: true
+
+#Перезапускаем TFTP-сервер и добавляем его в автозагрузку
+- name: restart tftp-server
+  service:
+    name: tftp.service
+    state: restarted
+    enabled: true
+
+#Перезапуск службы и добавление в автозагрузку
+- name: restart dhcp-server
+  service:
+    name: dhcpd
+    state: restarted
+    enabled: true
