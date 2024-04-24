@@ -133,5 +133,51 @@ root@o0kml-pc:/home/o0kml/dhcp_pxe/ansible/roles#  ansible-galaxy init dhcp_pxe
 sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-*
 sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
 ```
+## 1. Устанавливаем Web-сервер Apache:
+```
+yum install httpd
+```
+## 2. Далее скачиваем образ CentOS 8.4.2150:
+```
+wget https://mirror.sale-dedic.com/centos/8.4.2105/isos/x86_64/CentOS-8.4.2105-x86_64-dvd1.iso
+```
+## 3. Монтируем данный образ:
 
+```
+mount -t iso9660 CentOS-8.4.2105-x86_64-dvd1.iso /mnt -o loop,ro
+```
+## 4. Создаём каталог /iso и копируем в него содержимое данного каталога:
+```
+mkdir /iso
+cp -r /mnt/* /iso
+```
+## 5. Ставим права 755 на каталог /iso:
 
+```
+chmod -R 755 /iso
+```
+6. Настраиваем доступ по HTTP для файлов из каталога /iso:
+● Создаем конфигурационный файл:
+```
+vi /etc/httpd/conf.d/pxeboot.conf
+```
+● Добавляем следующее содержимое в файл:
+```
+Alias /centos8 /iso
+#Указываем адрес директории /iso
+<Directory /iso>
+    Options Indexes FollowSymLinks
+    #Разрешаем подключения со всех ip-адресов
+    Require all granted
+</Directory>
+```
+● Перезапускаем веб-сервер:
+```
+systemctl restart httpd
+```
+● Добавляем его в автозагрузку:
+```
+systemctl enable httpd
+```
+7. Проверяем, что веб-сервер работает и каталог /iso доступен по сети:
+● С нашего компьютера сначала подключаемся к тестовой странице Apache:
