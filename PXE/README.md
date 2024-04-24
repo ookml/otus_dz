@@ -181,3 +181,228 @@ systemctl enable httpd
 ```
 7. Проверяем, что веб-сервер работает и каталог /iso доступен по сети:
 ● С нашего компьютера сначала подключаемся к тестовой странице Apache:
+<img src="./screens/2024-04-24_12-44.png" alt="2024-04-24_12-44.png" />
+<img src="./screens/2024-04-24_12-49.png" alt="2024-04-24_12-49.png" />
+
+Если файлы доступны, значит веб-сервер настроен корректно.
+
+## Настройки Веб-сервера в Ansible
+
+```
+root@o0kml-pc:/home/o0kml/dhcp_pxe/ansible# cat playbook.yml 
+---
+- name: CentOS_PXE | Set up PXE Server
+  #Указываем имя хоста или группу, которые будем настраивать
+  hosts: pxeserver
+  #Параметр выполнения модулей от root-пользователя
+  become: true
+
+  roles:
+    - { role: dhcp_pxe, when: ansible_system == 'Linux' }
+```
+```
+root@o0kml-pc:/home/o0kml/dhcp_pxe/ansible# cat ./roles/dhcp_pxe/tasks/main.yml 
+---
+# tasks file for dhcp_pxe
+
+- include_tasks: web.yml
+
+- include_tasks: tftp.yml
+
+- include_tasks: dhcp.yml
+
+- include_tasks: ks.yml
+
+```
+```
+root@o0kml-pc:/home/o0kml/dhcp_pxe/ansible# cat ./roles/dhcp_pxe/tasks/web.yml
+---
+# tasks file for dhcp_pxe
+
+#sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-*
+- name: set up repo
+  replace:
+    path: "{{ item }}"
+    regexp: 'mirrorlist'
+    replace: '#mirrorlist'
+  loop:
+  - /etc/yum.repos.d/CentOS-Linux-AppStream.repo
+  - /etc/yum.repos.d/CentOS-Linux-BaseOS.repo
+
+#sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
+- name: set up repo
+  replace:
+    path: "{{ item }}"
+    regexp: '#baseurl=http://mirror.centos.org'
+    replace: 'baseurl=http://vault.centos.org'
+  loop:
+  - /etc/yum.repos.d/CentOS-Linux-AppStream.repo
+  - /etc/yum.repos.d/CentOS-Linux-BaseOS.repo
+
+#Установка пакета httpd (дополнительно сразу ставятся все пакеты, которые потребуются в данном задании)
+- name: install softs on CentOS
+  yum:
+    name:
+    - vim
+    - wget
+    - epel-release
+    - httpd
+    - tftp-server
+    - dhcp-server
+    state: present
+    update_cache: true
+
+#Скачивание образа CentOS-8.4.2105-x86_64-dvd1.iso
+#Скачиваться будет долго, размер файла больше 9 ГБ.
+- name: Download ISO image CentOS 8.4.2105
+  get_url:
+    url: http://mirror.sale-dedic.com/centos/8.4.2105/isos/x86_64/CentOS-8.4.2105-x86_64-dvd1.iso
+    dest: ~/CentOS-8.4.2105-x86_64-dvd1.iso
+    mode: '0755'
+
+#Создание каталога /iso и назначение прав 755
+- name: Create ISO directory
+  file:
+    path: /iso
+    state: directory
+    mode: '0755'
+
+#Монтируем образ в каталог /mnt
+- name: Mount ISO image
+  mount:
+    path: /mnt
+    src: /root/CentOS-8.4.2105-x86_64-dvd1.iso
+    fstype: iso9660
+    opts: ro,loop
+    state: mounted
+
+#Копируем все файлы из каталога /mnt в /iso
+- name: copy ALL files from /mnt to /iso
+  copy:
+    src: /mnt/
+    dest: /iso
+    remote_src: yes
+    directory_mode: yes
+
+#Копируем конфгурационный файл pxeboot.conf (Файл должен быть предварительно создан в каталаге templates)
+- name: set up httpd config
+  copy:
+    src: pxeboot.conf
+    dest: /etc/httpd/conf.d/pxeboot.conf
+    owner: root
+    group: root
+    mode: 0640
+  notify:
+  - restart httpd
+
+```
+
+```
+root@o0kml-pc:/home/o0kml/dhcp_pxe/ansible# cat ./roles/dhcp_pxe/handlers/main.yml
+---
+# handlers file for dhcp_pxe
+
+---
+# handlers file for dhcp_pxe
+
+#Перезупускаем httpd и добавляем службу в автозагрузку
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted
+    enabled: true
+
+```
+На этом настройка веб-сервера завершена.
+
+## Настройка TFTP-сервера
+
+1. Устанавлием tftp-сервер:
+```
+yum install tftp-server
+```
+2. Запускаем службу:
+```
+systemctl start tftp.service
+```
+3. Проверяем, в каком каталоге будут храиться файлы, которые будет отдавать TFTP-сервер:
+```
+[root@pxeserver ~]# systemctl status tftp.service
+● tftp.service - Tftp Server
+   Loaded: loaded (/usr/lib/systemd/system/tftp.service; indirect; vendor preset: disabled)
+   Active: active (running) since Wed 2024-04-24 10:01:16 UTC; 9s ago
+     Docs: man:in.tftpd
+ Main PID: 11225 (in.tftpd)
+    Tasks: 1 (limit: 4953)
+   Memory: 192.0K
+   CGroup: /system.slice/tftp.service
+           └─11225 /usr/sbin/in.tftpd -s /var/lib/tftpboot
+
+Apr 24 10:01:16 pxeserver systemd[1]: Started Tftp Server.
+
+```
+В статусе видим, что рабочий каталог /var/lib/tftpboot.
+
+4. Созаём каталог, в котором будем хранить наше меню загрузки:
+```
+mkdir /var/lib/tftpboot/pxelinux.cfg
+```
+5. Создаём меню-файл:
+```
+[root@pxeserver ~]# cat /var/lib/tftpboot/pxelinux.cfg/default
+default menu.c32
+prompt 0
+#Время счётчика с обратным отсчётом (установлено 15 секунд)
+timeout 150
+#Параметр использования локального времени
+ONTIME local
+#Имя «шапки» нашего меню
+menu title OTUS PXE Boot Menu
+       #Описание первой строки
+       label 1
+       #Имя, отображаемое в первой строке
+       menu label ^ Graph install CentOS 8.4
+       #Адрес ядра, расположенного на TFTP-сервере
+       kernel /vmlinuz
+       #Адрес файла initrd, расположенного на TFTP-сервере
+       initrd /initrd.img
+       #Получаем адрес по DHCP и указываем адрес веб-сервера
+       append ip=enp0s3:dhcp inst.repo=http://10.0.0.20/centos8
+       label 2
+       menu label ^ Text install CentOS 8.4
+       kernel /vmlinuz
+       initrd /initrd.img
+       append ip=enp0s3:dhcp inst.repo=http://10.0.0.20/centos8 text
+       label 3
+       menu label ^ rescue installed system
+       kernel /vmlinuz
+       initrd /initrd.img
+       append ip=enp0s3:dhcp inst.repo=http://10.0.0.20/centos8 rescue
+```
+6. Распакуем файл syslinux-tftpboot-6.04-5.el8.noarch.rpm:
+```
+rpm2cpio /iso/BaseOS/Packages/syslinux-tftpboot-6.04-5.el8.noarch.rpm | cpio -dimv
+```
+7. После распаковки в каталоге пользователя root будет создан каталог tftpboot из которого потребуется скопировать следующие файлы:
+
+- pxelinux.0
+- ldlinux.c32
+- libmenu.c32
+- libutil.c32
+- menu.c32
+- vesamenu.c32
+```
+cd tftpboot
+cp pxelinux.0 ldlinux.c32 libmenu.c32 libutil.c32 menu.c32 vesamenu.c32 /var/lib/tftpboot/
+```
+8. Также в каталог /var/lib/tftpboot/ нам потребуется скопировать файлы initrd.img и vmlinuz, которые располагаются в каталоге /iso/images/pxeboot/:
+```
+cp /iso/images/pxeboot/{initrd.img,vmlinuz} /var/lib/tftpboot/
+```
+9. Далее перезапускаем TFTP-сервер и добавляем его в автозагрузку:
+```
+systemctl restart tftp.service
+systemctl enable tftp.service
+```
+## Настройка TFTP-сервера в Ansible:
+
