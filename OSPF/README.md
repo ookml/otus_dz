@@ -15,17 +15,7 @@
 apt update
 apt install vim traceroute tcpdump net-tools
 ```
-
-```
-vagrant up
-```
-далее
-```
-vagrant ssh router1
-sudo -i
-```
-
-
+Подключаемся по ssh на router1 и настраиваем
 
 2.1 Настройка OSPF между машинами на базе Quagga
 
