@@ -195,3 +195,47 @@ ls -l /etc/frr
 chown frr:frr /etc/frr/frr.conf 
 chmod 640 /etc/frr/frr.conf 
 ```
+9) Перезапускаем FRR и добавляем его в автозагрузку и проверям, что OSPF перезапустился без ошибок
+
+```
+root@router1:~# systemctl restart frr
+
+root@router1:~# 
+root@router1:~# systemctl enable frr
+Synchronizing state of frr.service with SysV service script with /lib/systemd/systemd-sysv-install.
+Executing: /lib/systemd/systemd-sysv-install enable frr
+root@router1:~# systemctl status frr
+● frr.service - FRRouting
+     Loaded: loaded (/lib/systemd/system/frr.service; enabled; vendor preset: enabled)
+     Active: active (running) since Tue 2024-05-21 11:44:00 UTC; 25s ago
+       Docs: https://frrouting.readthedocs.io/en/latest/setup.html
+   Main PID: 10478 (watchfrr)
+     Status: "FRR Operational"
+      Tasks: 10 (limit: 1117)
+     Memory: 22.1M
+     CGroup: /system.slice/frr.service
+             ├─10478 /usr/lib/frr/watchfrr -d -F traditional zebra mgmtd ospfd staticd
+             ├─10491 /usr/lib/frr/zebra -d -F traditional -A 127.0.0.1 -s 90000000
+             ├─10496 /usr/lib/frr/mgmtd -d -F traditional -A 127.0.0.1
+             ├─10498 /usr/lib/frr/ospfd -d -F traditional -A 127.0.0.1
+             └─10501 /usr/lib/frr/staticd -d -F traditional -A 127.0.0.1
+
+May 21 11:43:55 router1 ospfd[10498]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 21 11:43:55 router1 frrinit.sh[10508]: [10508|ospfd] Configuration file[/etc/frr/frr.conf] processing failure: 2
+May 21 11:43:55 router1 watchfrr[10478]: [ZJW5C-1EHNT] restart all process 10479 exited with non-zero status 2
+May 21 11:44:00 router1 watchfrr[10478]: [QDG3Y-BY5TN] zebra state -> up : connect succeeded
+May 21 11:44:00 router1 watchfrr[10478]: [QDG3Y-BY5TN] ospfd state -> up : connect succeeded
+May 21 11:44:00 router1 watchfrr[10478]: [QDG3Y-BY5TN] staticd state -> up : connect succeeded
+May 21 11:44:00 router1 watchfrr[10478]: [QDG3Y-BY5TN] mgmtd state -> up : connect succeeded
+May 21 11:44:00 router1 watchfrr[10478]: [KWE5Q-QNGFC] all daemons up, doing startup-complete notify
+May 21 11:44:00 router1 frrinit.sh[10459]:  * Started watchfrr
+May 21 11:44:00 router1 systemd[1]: Started FRRouting.
+root@router1:~# 
+```
+Если мы правильно настроили OSPF, то с любого хоста нам должны быть доступны сети:
+192.168.10.0/24
+192.168.20.0/24
+192.168.30.0/24
+10.0.10.0/30 
+10.0.11.0/30
+10.0.13.0/30
