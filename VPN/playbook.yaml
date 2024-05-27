@@ -1,0 +1,16 @@
+--- 
+- name: Bootstarp
+  hosts: all 
+  roles:
+    role: bootstrap 
+
+
+- name: Configuring server
+  hosts: server 
+  roles: 
+    - role: server 
+
+
+- name: Configuring client
+  hosts: client 
+  roles: 
