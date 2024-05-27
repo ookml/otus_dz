@@ -175,3 +175,41 @@ verb 3
 systemctl start openvpn@server
 systemctl enable openvpn@server
 ```
+
+На хост-машине: 
+
+1) Необходимо создать файл client.conf со следующим содержимым:
+
+```
+dev tun 
+proto udp 
+remote 192.168.56.10 1207 
+client 
+resolv-retry infinite 
+remote-cert-tls server 
+ca ./ca.crt 
+cert ./client.crt 
+key ./client.key 
+route 192.168.56.0 255.255.255.0 
+persist-key 
+persist-tun 
+comp-lzo 
+verb 3 
+```
+2) Скопировать в одну директорию с client.conf файлы с сервера:
+
+```
+/etc/openvpn/pki/ca.crt 
+/etc/openvpn/pki/issued/client.crt 
+/etc/openvpn/pki/private/client.key
+```
+Далее можно проверить подключение с помощью: openvpn --config client.conf
+
+При успешном подключении проверяем пинг по внутреннему IP адресу  сервера в туннеле: ping -c 4 10.10.10.1 
+
+Также проверяем командой ip r (netstat -rn) на хостовой машине что сеть туннеля импортирована в таблицу маршрутизации. 
+
+
+
+
+
