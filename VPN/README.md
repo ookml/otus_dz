@@ -7,7 +7,7 @@
 2. Поднять RAS на базе OpenVPN с клиентскими сертификатами, подключиться с локальной машины на ВМ
 3. (*) Самостоятельно изучить и настроить ocserv, подключиться с хоста к ВМ
 
-## 1. TUN/TAP режимы VPN
+# 1. TUN/TAP режимы VPN
 
 Для выполнения первого пункта необходимо написать Vagrantfile, который будет поднимать 2 виртуальные машины server и client. 
 Типовой пример Vagrantfile для данной задачи:
@@ -114,3 +114,64 @@ systemctl enable openvpn@server
 
 Повторяем пункты 1-2 для режима работы tun. 
 Конфигурационные файлы сервера и клиента изменятся только в директиве dev. Делаем выводы о режимах, их достоинствах и недостатках.
+
+# 2. RAS на базе OpenVPN 
+
+## # Устанавливаем необходимые пакеты 
+
+```
+apt update
+apt install openvpn easy-rsa
+```
+## Переходим в директорию /etc/openvpn и инициализируем PKI
+```
+cd /etc/openvpn
+/usr/share/easy-rsa/easyrsa init-pki
+```
+## Генерируем необходимые ключи и сертификаты для сервера 
+```
+echo 'rasvpn' | /usr/share/easy-rsa/easyrsa gen-req server nopass
+echo 'yes' | /usr/share/easy-rsa/easyrsa sign-req server server 
+/usr/share/easy-rsa/easyrsa gen-dh
+openvpn --genkey secret ca.key
+```
+## Генерируем необходимые ключи и сертификаты для клиента
+```
+echo 'client' | /usr/share/easy-rsa/easyrsa gen-req client nopass
+echo 'yes' | /usr/share/easy-rsa/easyrsa sign-req client client
+```
+## Создаем конфигурационный файл сервера 
+```
+vim /etc/openvpn/server.conf
+```
+## Зададим параметр iroute для клиента
+```
+echo 'iroute 10.10.10.0 255.255.255.0' > /etc/openvpn/client/client
+```
+## Содержимое файла server.conf
+```
+port 1207 
+proto udp 
+dev tun 
+ca /etc/openvpn/pki/ca.crt 
+cert /etc/openvpn/pki/issued/server.crt 
+key /etc/openvpn/pki/private/server.key 
+dh /etc/openvpn/pki/dh.pem 
+server 10.10.10.0 255.255.255.0 
+ifconfig-pool-persist ipp.txt 
+client-to-client 
+client-config-dir /etc/openvpn/client 
+keepalive 10 120 
+comp-lzo 
+persist-key 
+persist-tun 
+status /var/log/openvpn-status.log 
+log /var/log/openvpn.log 
+verb 3
+```
+
+## Запускаем сервис (при необходимости создать файл юнита как в задании 1) 
+```
+systemctl start openvpn@server
+systemctl enable openvpn@server
+```
