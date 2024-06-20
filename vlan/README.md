@@ -156,3 +156,63 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 ## Настройка LACP
 1. Настроим LACP между хостами inetRouter и centralRouter
 - Создадим lacp.yml
+```
+- name: set up bond0
+  hosts: inetRouter,centralRouter
+  become: yes
+  tasks:
+  - name: set up ifcfg-bond0
+    template:
+      src: ifcfg-bond0.j2
+      dest: /etc/sysconfig/network-scripts/ifcfg-bond0
+      owner: root
+      group: root
+      mode: 0644
+  
+  - name: set up eth1,eth2
+    copy: 
+      src: "{{ item }}" 
+      dest: /etc/sysconfig/network-scripts/
+      owner: root
+      group: root
+      mode: 0644
+    with_items:
+      - ifcfg-eth1.j2
+      - ifcfg-eth2.j2
+  #Перезагрузка хостов 
+  - name: restart hosts for bond0
+    reboot:
+      reboot_timeout: 3600
+```
+2. Создадим файлы шаблонов для eth1 и eth2.
+- ifcfg-eth1.j2
+```
+#Имя физического интерфейса
+DEVICE=eth1
+#Включать интерфейс при запуске системы
+ONBOOT=yes
+#Отключение DHCP-клиента
+BOOTPROTO=none
+#Указываем, что порт часть bond-интерфейса
+MASTER=bond0
+#Указыаваем роль bond
+SLAVE=yes
+NM_CONTROLLED=yes
+USERCTL=no
+```
+- ifcfg-eth2.j2
+```
+#Имя физического интерфейса
+DEVICE=eth2
+#Включать интерфейс при запуске системы
+ONBOOT=yes
+#Отключение DHCP-клиента
+BOOTPROTO=none
+#Указываем, что порт часть bond-интерфейса
+MASTER=bond0
+#Указыаваем роль bond
+SLAVE=yes
+NM_CONTROLLED=yes
+USERCTL=no
+```
+3. Подключимся к inetRouter и проверим centralRouter, затем отключим eth1 на CentralRouter и проверим ping.
