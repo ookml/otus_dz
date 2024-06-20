@@ -153,3 +153,6 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 64 bytes from 10.10.10.1: icmp_seq=5 ttl=64 time=0.914 ms
 
 ```
+## Настройка LACP
+1. Настроим LACP между хостами inetRouter и centralRouter
+- Создадим lacp.yml
