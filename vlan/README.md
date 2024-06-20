@@ -215,4 +215,71 @@ SLAVE=yes
 NM_CONTROLLED=yes
 USERCTL=no
 ```
+- ifcfg-bond0.j2
+```
+DEVICE=bond0
+NAME=bond0
+TYPE=Bond
+BONDING_MASTER=yes
+IPADDR={{ bond_ip }}
+NETMASK=255.255.255.252
+ONBOOT=yes
+BOOTPROTO=static
+BONDING_OPTS="mode=1 miimon=100 fail_over_mac=1"
+NM_CONTROLLED=yes
+USERCTL=no
+```
 3. Подключимся к inetRouter и проверим centralRouter, затем отключим eth1 на CentralRouter и проверим ping.
+```
+root@LinuxMint:/var/vlan/ansible# vagrant ssh inetRouter
+Last login: Thu Jun 20 08:16:53 2024 from 192.168.56.1
+[vagrant@inetRouter ~]$ sudo -i
+[root@inetRouter ~]# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 52:54:00:4d:77:d3 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.15/24 brd 10.0.2.255 scope global noprefixroute dynamic eth0
+       valid_lft 86296sec preferred_lft 86296sec
+    inet6 fe80::5054:ff:fe4d:77d3/64 scope link 
+       valid_lft forever preferred_lft forever
+3: bond0: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 08:00:27:81:12:78 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.255.1/30 brd 192.168.255.3 scope global noprefixroute bond0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a00:27ff:fe81:1278/64 scope link 
+       valid_lft forever preferred_lft forever
+4: eth1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast master bond0 state UP group default qlen 1000
+    link/ether 08:00:27:81:12:78 brd ff:ff:ff:ff:ff:ff
+5: eth2: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast master bond0 state UP group default qlen 1000
+    link/ether 08:00:27:de:1e:43 brd ff:ff:ff:ff:ff:ff
+6: eth3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 08:00:27:6d:07:3f brd ff:ff:ff:ff:ff:ff
+    inet 192.168.56.10/24 brd 192.168.56.255 scope global noprefixroute eth3
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a00:27ff:fe6d:73f/64 scope link 
+       valid_lft forever preferred_lft forever
+[root@inetRouter ~]# ping 192.168.255.2
+PING 192.168.255.2 (192.168.255.2) 56(84) bytes of data.
+64 bytes from 192.168.255.2: icmp_seq=1 ttl=64 time=1.04 ms
+64 bytes from 192.168.255.2: icmp_seq=2 ttl=64 time=0.723 ms
+64 bytes from 192.168.255.2: icmp_seq=3 ttl=64 time=1.25 ms
+64 bytes from 192.168.255.2: icmp_seq=4 ttl=64 time=1.23 ms
+64 bytes from 192.168.255.2: icmp_seq=5 ttl=64 time=0.948 ms
+
+```
+4. Не отменяя ping подключаемся к хосту centralRouter и выключаем там интерфейс eth1:
+```
+root@LinuxMint:/var/vlan# vagrant ssh centralRouter
+Last login: Thu Jun 20 08:17:54 2024 from 192.168.56.1
+[vagrant@centralRouter ~]$ sudo -i
+[root@centralRouter ~]# ip link set down eth1
+```
+После данного действия ping не должен пропасть, так как трафик пойдёт по-другому порту.
+```
+[root@centralRouter ~]# ip link set up eth1
+```
