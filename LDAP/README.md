@@ -107,4 +107,11 @@ Valid starting     Expires            Service principal
 
 ![image](https://github.com/ookml/otus_dz/assets/21999102/2a5de09e-6841-4127-a8a1-3c26f2248b1c)
 
+Откроется веб-консоль управления FreeIPA. Данные во FreeIPA можно вносить как через веб-консоль, так и средствами командной строки.
+
+На этом установка и настройка FreeIPA-сервера завершена.
+
+## 2. Ansible playbook для конфигурации клиента
+
+На хостовой машине в файл /etc/hosts добавляем 192.168.57.10 ipa.otus.lan ipa
 
