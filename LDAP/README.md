@@ -76,10 +76,35 @@ Continue to configure the system with these values? [no]: yes
 Далее начнется процесс установки. Процесс установки занимает примерно 10-15 минут (иногда время может быть другим). Если мастер успешно выполнит настройку FreeIPA то в конце мы получим сообщение: 
 The ipa-server-install command was successful
 
+## Если выдаст ошибку ipapython.admintool: ERROR    CA did not start in 300.0s
+- ipapython.admintool: ERROR    The ipa-server-install command failed. See /var/log/ipaserver-install.log for more information
+
+РЕШЕНИЕ: yum update nss
+
+После удалите ipa-server-install --uninstall и установите заново ipa-server-install --uninstall
+
 При вводе параметров установки мы вводили 2 пароля:
 
 - Directory Manager password — это пароль администратора сервера каталогов, У этого пользователя есть полный доступ к каталогу.
 - IPA admin password — пароль от пользователя FreeIPA admin
 
 После успешной установки FreeIPA, проверим, что сервер Kerberos может выдать нам билет:
+```
+[root@ipa ~]# kinit admin
+Password for admin@OTUS.LAN: 
+[root@ipa ~]# klist
+Ticket cache: KEYRING:persistent:0:0
+Default principal: admin@OTUS.LAN
+
+Valid starting     Expires            Service principal
+06/26/24 11:02:11  06/27/24 11:01:46  krbtgt/OTUS.LAN@OTUS.LAN
+```
+Мы можем зайти в Web-интерфейс нашего FreeIPA-сервера, для этого на нашей хостой машине в браузере вводим https://ipa.otus.lan/ipa/ui/
+
+![image](https://github.com/ookml/otus_dz/assets/21999102/ccbdd85f-fc3f-4a3d-83dd-84d5c54afc5a)
+
+Откроется окно управления FreeIPA-сервером. В имени пользователя укажем admin, в пароле укажем наш IPA admin password и нажмём войти. 
+
+![image](https://github.com/ookml/otus_dz/assets/21999102/2a5de09e-6841-4127-a8a1-3c26f2248b1c)
+
 
