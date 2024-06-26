@@ -1,3 +1,4 @@
+
 # Vagrant-стенд c LDAP на базе FreeIPA
 
 ## Описание домашнего задания
@@ -113,5 +114,36 @@ Valid starting     Expires            Service principal
 
 ## 2. Ansible playbook для конфигурации клиента
 
-На хостовой машине в файл /etc/hosts добавляем 192.168.57.10 ipa.otus.lan ipa
+На хостовой машине в файл /etc/ansible/hosts  добавляем
+```
+[Otus]
+client1.otus.lan ansible_host=192.168.57.11 ansible_user=vagrant ansible_ssh_private_key_file=../.vagrant/machines/client1.otus.lan/virtualbox/private_key
+client2.otus.lan ansible_host=192.168.57.12 ansible_user=vagrant ansible_ssh_private_key_file=../.vagrant/machines/client2.otus.lan/virtualbox/private_key
+```
+далее запускаем ansible-playbook provision.yml -l Otus
+
+Видим что к домену добавилось два хоста 
+![image](https://github.com/ookml/otus_dz/assets/21999102/02122e33-c2f3-469b-ada0-6f29ef8690a5)
+
+Давайте проверим работу LDAP, для этого на сервере FreeIPA создадим пользователя и попробуем залогиниться к клиенту:
+- Авторизируемся на сервере: kinit admin
+- Создадим пользователя otus-user
+![image](https://github.com/ookml/otus_dz/assets/21999102/ecb17a79-5796-4af3-886a-e42ad48ecb88)
+
+На хосте client1 или client2 выполним команду kinit otus-user
+```
+root@LinuxMint:/var/LDAP/ansible# vagrant ssh client1.otus.lan
+Last login: Wed Jun 26 11:43:12 2024 from 10.0.2.2
+[vagrant@client1 ~]$ kinit otus-user
+Password for otus-user@OTUS.LAN: 
+Password expired.  You must change it now.
+Enter new password: 
+Enter it again: 
+```
+Система запросит у нас пароль и попросит ввести новый пароль. 
+
+На этом процесс добавления хостов к FreeIPA-серверу завершен.
+
+
+
 
