@@ -60,4 +60,4 @@
   
   #Запуск скрипта добавления хоста к серверу
   - name: add host to ipa-server
-    shell: echo -e "yes\nyes" | ipa-client-install --mkhomedir --domain=OTUS.LAN --server=ipa.otus.lan --no-ntp -p admin -w Kolobo4ek3378
+    shell: echo -e "yes\nyes" | ipa-client-install --mkhomedir --domain=OTUS.LAN --server=ipa.otus.lan --no-ntp -p admin -w ПАРОЛЬ
